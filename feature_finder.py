@@ -46,6 +46,21 @@ def positions(gene_list, gene_dict) :
     gene_list_file.close()
     return locations_dict
 
+def findingSequences(fasta, features, distance) :
+    genome_dict = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
+    sequences_list = []
+    for feat in features :
+        if feat.strand = '+1' :
+            sequence  = genome_dict[feat.chrom].seq[(feat.start-1)-distance:(feat.start)]
+            seqAnnot = SeqRecord(sequence)
+            seqAnnot.id = feat.id
+        else :
+            sequence  = genome_dict[feat.chrom].seq[(feat.start-1)-distance:(feat.start)].reverse_complement()
+            seqAnnot = SeqRecord(sequence)
+            seqAnnot.id = feat.id
+        sequences_list.append(seqAnnot)
+    return sequences_list
+
 in_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.86.gtf"
 gene_list_file =open("/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/gene_list.txt", 'r')
 limite_info= dict( gff_id = [str(i) for i in range(1,21)]+['X','Y'], gff_source = ['ensembl'], gff_type = ['gene'])
