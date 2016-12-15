@@ -3,6 +3,7 @@
 from feature_finder import *
 import multiprocessing as mp
 from itertools import product
+import pickle
 
 in_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.86.gtf"
 gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/gene_list.txt"
@@ -36,3 +37,5 @@ for chunk in range(numproc) :
 for proc in jobs :
     proc.join()
 print(return_dict)
+
+pickle.dump(return_dict, open("./return_dict.p", "wb"))

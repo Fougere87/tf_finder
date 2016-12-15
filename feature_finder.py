@@ -84,7 +84,7 @@ def motifs_list(jasp_motifs_file) :
     jasp_motifs.close()
     return motifs_list
 
-def align_motif(mot, sequence, background, precision = 10**4, balance = 1000, pseudocounts = 0.5) :
+def align_motif(mot, sequence, background, precision = 10**4, balance = 100000, pseudocounts = 0.1) :
     mot.background = background
     mot.pseudocounts = pseudocounts
     distribution = mot.pssm.distribution(background=background, precision=precision)
