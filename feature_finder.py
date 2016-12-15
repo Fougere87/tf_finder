@@ -90,4 +90,25 @@ def align_motif(mot, sequence, background, precision = 10**4, balance = 1000, ps
     distribution = mot.pssm.distribution(background=background, precision=precision)
     threshold = distribution.threshold_balanced(balance)
     ret_list = [(position, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
+    print('Found %i motifs' %len(ret_list))
     return ret_list
+
+def testingAllSeq(motifs, sequences) :
+    results = {}
+    for s in sequences :
+        print('Testing gene %s' % s.id )
+        bckgrnd = background(s.seq)
+        for m in motifs :
+            print('testing motif', m.matrix_id)
+            alignment = align_motif(mot=m, sequence=s.seq, background= bckgrnd)
+            results[s.id] = alignment
+    return results
+
+
+def testingAllSeq_monoArg2(comb, return_dict) :
+
+    for c in comb :
+        print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
+        bckgrnd = background(c[1].seq)
+        alignment = align_motif(mot=c[0], sequence=c[1].seq, background= bckgrnd)
+        return_dict[str((c[1].id,c[0].matrix_id))] = alignment
