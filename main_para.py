@@ -6,7 +6,7 @@ from itertools import product
 import pickle
 
 in_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.86.gtf"
-gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/gene_list.txt"
+gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/Gene_list_EPI_vs_PE.txt"
 jasp_motifs_file = "/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/Jaspar_sites/pfm_vertebrates.txt"
 fasta_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.dna.chromosome.1.fa"
 limite_info= dict( gff_id = [str(i) for i in range(1,21)]+['X','Y'], gff_source = ['ensembl'], gff_type = ['gene'])
@@ -36,6 +36,12 @@ for chunk in range(numproc) :
 
 for proc in jobs :
     proc.join()
-print(return_dict)
+
+for k in return_dict.keys() :
+    t = eval(k)
+    if return_dict[k] != [] :
+        print(t[0], '\t', t[1], '\t', return_dict[k])
+
+
 
 pickle.dump(return_dict, open("./return_dict.p", "wb"))
