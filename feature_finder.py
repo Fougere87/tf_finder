@@ -12,10 +12,16 @@ import os, sys, gc
 class FeatPosition:
     def __init__(self, id, chrom, start, end, strand):
         self.id = id
+        self.name = name
         self.chrom = chrom
         self.start = start
         self.end = end
         self.strand = strand
+
+class Alignement(Seq):
+    def _init_(self,gene, tf_mot,strand, start, end):
+
+
 
 def get_features_from_gff(gff_file, limite_info) :
     """This function returns a dict object containing all the features
@@ -37,14 +43,25 @@ def positions(gene_list_file, gene_dict) :
     for line in gene_list :
         try :
             feat = gene_dict[line[0:len(line)-1]]
+        except KeyError :
+            print('Gene %s non trouvé', line[0:len(line)-1])
+        try :
             location = FeatPosition(id = line[0:len(line)-1],
                                     chrom = feat.qualifiers['chrom'],
+                                    name = feat.qualifiers['gene_name'],
                                     start = feat.location.nofuzzy_start,
                                     end = feat.location.nofuzzy_end,
                                     strand = feat.location.strand )
             locations_list.append(location)
         except KeyError :
-            print('Gene %s non trouvé', line[0:len(line)-1])
+            print('Pas de gene_name pour %s.', line[0:len(line)-1])
+            location = FeatPosition(id = line[0:len(line)-1],
+                                    chrom = feat.qualifiers['chrom'],
+                                    name = '',
+                                    start = feat.location.nofuzzy_start,
+                                    end = feat.location.nofuzzy_end,
+                                    strand = feat.location.strand )
+            locations_list.append(location)
     gene_list.close()
     return locations_list
 
@@ -58,6 +75,7 @@ def finding_sequences(fasta, features, distance=10000) :
             sequence.alphabet= IUPAC.unambiguous_dna
             seqAnnot = SeqRecord(sequence)
             seqAnnot.id = feat.id
+            seqAnnot.name = feat
         else :
             sequence  = genome_dict[feat.chrom].seq[(feat.end-1):(feat.end+distance-1)].reverse_complement()
             sequence.alphabet= IUPAC.unambiguous_dna
@@ -89,7 +107,7 @@ def align_motif(mot, sequence, background, precision = 10**4, balance = 100000, 
     mot.pseudocounts = pseudocounts
     distribution = mot.pssm.distribution(background=background, precision=precision)
     threshold = distribution.threshold_balanced(balance)
-    ret_list = [(position, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
+    ret_list = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
     print('Found %i motifs' %len(ret_list))
     return ret_list
 
