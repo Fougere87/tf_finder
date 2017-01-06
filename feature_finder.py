@@ -2,7 +2,7 @@
 
 from BCBio.GFF import GFFExaminer
 from BCBio import GFF
-from Bio import SeqIO, motifs
+from Bio import SeqIO, motifs, SeqFeature
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -18,8 +18,8 @@ class FeatPosition:
         self.end = end
         self.strand = strand
 
-class Alignement(Seq):
-    def _init_(self,gene, tf_mot,strand, start, end):
+class Alignement(SeqRecord):
+    def _init_(self,id,name, tf_mot_id, tf_mot_name, strand, start, end, chr, chrstart, chrend):
 
 
 
@@ -65,22 +65,31 @@ def positions(gene_list_file, gene_dict) :
     gene_list.close()
     return locations_list
 
-def finding_sequences(fasta, features, distance=10000) :
+def finding_sequences(fasta, features, distance=DISTANCE) :
     """Extracts the ustream sequences from the gnenomic fasta file. Possible to set the distance from start"""
     genome_dict = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
     sequences_list = []
     for feat in features :
         if feat.strand == '+1' :
-            sequence  = genome_dict[feat.chrom].seq[(feat.start-1)-distance:(feat.start)]
+            sequence  = genome_dict[feat.chrom].seq[(feat.start-1)-distance:(feat.start-1)]
             sequence.alphabet= IUPAC.unambiguous_dna
             seqAnnot = SeqRecord(sequence)
             seqAnnot.id = feat.id
-            seqAnnot.name = feat
+            seqAnnot.name = feat.name
+            seqAnnot.annotations["start"] =  (feat.start-1)-distance
+            seqAnnot.annotations["end"] = feat.start-1
+            seqAnnot.annotations["chr"] = feat.chrom
+            seqAnnot.annotations["strand"] = feat.strand
         else :
-            sequence  = genome_dict[feat.chrom].seq[(feat.end-1):(feat.end+distance-1)].reverse_complement()
+            sequence  = genome_dict[feat.chrom].seq[(feat.end+1):(feat.end+1+distance)].reverse_complement()
             sequence.alphabet= IUPAC.unambiguous_dna
             seqAnnot = SeqRecord(sequence)
             seqAnnot.id = feat.id
+            seqAnnot.name = feat.name
+            seqAnnot.annotations["start"] =  feat.end+1
+            seqAnnot.annotations["end"] = feat.end+1+distance
+            seqAnnot.annotations["chr"] = feat.chrom
+            seqAnnot.annotations["strand"] = feat.strand
         sequences_list.append(seqAnnot)
     del(genome_dict)
     return sequences_list
@@ -107,7 +116,9 @@ def align_motif(mot, sequence, background, precision = 10**4, balance = 100000, 
     mot.pseudocounts = pseudocounts
     distribution = mot.pssm.distribution(background=background, precision=precision)
     threshold = distribution.threshold_balanced(balance)
-    ret_list = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
+    alig_list = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
+    for alig in alig_list :
+        sequence.features.append(SeqFeature(id = mot+"."+str(alig[0]), location = SeqFeature.FeatureLocation(start = alig[0], end = "longueur motif à trouver", ))
     print('Found %i motifs' %len(ret_list))
     return ret_list
 
