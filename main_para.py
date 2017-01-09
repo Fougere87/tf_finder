@@ -33,7 +33,7 @@ jobs = []
 numproc = 8
 for chunk in range(numproc) :
     #print(argum[int(chunk*len(argum)/numproc):int((chunk+1)*len(argum)/numproc)])
-    p = mp.Process(target=testingAllSeq_monoArg2, args=(argum[int(chunk*len(argum)/numproc):int((chunk+1)*len(argum)/numproc)], return_dict,))
+    p = mp.Process(target=testingAllSeq, args=(argum[int(chunk*len(argum)/numproc):int((chunk+1)*len(argum)/numproc)], return_dict,))
     jobs.append(p)
     p.start()
 

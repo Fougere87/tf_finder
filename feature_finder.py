@@ -111,33 +111,31 @@ def motifs_list(jasp_motifs_file) :
     jasp_motifs.close()
     return motifs_list
 
-def align_motif(mot, sequence, background, precision = 10**4, balance = 100000, pseudocounts = 0.1) :
-    mot.background = background
+def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocounts = 0.1) :
+    mot.background = background(sequenceR.seq)
     mot.pseudocounts = pseudocounts
-    distribution = mot.pssm.distribution(background=background, precision=precision)
+    distribution = mot.pssm.distribution(mot.background, precision=precision)
     threshold = distribution.threshold_balanced(balance)
-    alig_list = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequence)) if (position > 0)and(score > threshold)]
-    for alig in alig_list :
-        sequence.features.append(SeqFeature(id = mot+"."+str(alig[0]), location = SeqFeature.FeatureLocation(start = alig[0], end = "longueur motif à trouver", ))
+    aligList = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequenceR.seq)) if (position > 0)and(score > threshold)]
+    for alig in aligList :
+        sequenceR.features.append(SeqFeature(id = mot.matrix_id+"."+str(alig[0]), location = SeqFeature.FeatureLocation(start = alig[0], end = SeqFeature.FeatureLocation(start = alig[0] + len(mot)), strand = 1,  qualifiers["score"] = alig[1] ))
+
+    seqRC = sequenceR.seq.reverse_complement()
+    mot.background = background(seqRC)
+    distribution = mot.pssm.distribution(background=mot.background, precision=precision)
+    threshold = distribution.threshold_balanced(balance)
+    aligListNeg = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(seqRC)) if (position > 0)and(score > threshold)]
+    for alig in aligListNeg :
+        sequenceR.features.append(SeqFeature(id = mot.matrix_id+"."+str(alig[0])+".RC", location = SeqFeature.FeatureLocation(start = alig[0], end = SeqFeature.FeatureLocation(start = alig[0] + len(mot)), strand = -1,  qualifiers["score"] = alig[1] ))
+
+
     print('Found %i motifs' %len(ret_list))
-    return ret_list
-
-def testingAllSeq(motifs, sequences) :
-    results = {}
-    for s in sequences :
-        print('Testing gene %s' % s.id )
-        bckgrnd = background(s.seq)
-        for m in motifs :
-            print('testing motif', m.matrix_id)
-            alignment = align_motif(mot=m, sequence=s.seq, background= bckgrnd)
-            results[s.id] = alignment
-    return results
+    return sequenceR
 
 
-def testingAllSeq_monoArg2(comb, return_dict) :
 
+def testingAllSeq(comb, return_dict) :
     for c in comb :
         print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
-        bckgrnd = background(c[1].seq)
-        alignment = align_motif(mot=c[0], sequence=c[1].seq, background= bckgrnd)
-        return_dict[str((c[1].id,c[0].matrix_id))] = alignment
+        alignment = align_motif(mot=c[0], sequence=c[1]
+        return_dict[c[1].id] = alignment
