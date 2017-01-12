@@ -2,15 +2,19 @@
 
 from BCBio.GFF import GFFExaminer
 from BCBio import GFF
-from Bio import SeqIO, motifs, SeqFeature
+from Bio import SeqIO, motifs
 from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature , FeatureLocation
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 from collections import Counter
 import os, sys, gc
+import numpy
+
+
 
 class FeatPosition:
-    def __init__(self, id, chrom, start, end, strand):
+    def __init__(self, id, name, chrom, start, end, strand):
         self.id = id
         self.name = name
         self.chrom = chrom
@@ -18,10 +22,14 @@ class FeatPosition:
         self.end = end
         self.strand = strand
 
-class Alignement(SeqRecord):
-    def _init_(self,id,name, tf_mot_id, tf_mot_name, strand, start, end, chr, chrstart, chrend):
-
-
+class AligFeat:
+    def __init__(self,  id, name, start, end, strand, score):
+        self.id = id
+        self.name = name
+        self.start = start
+        self.end = end
+        self.strand = strand
+        self.score = score
 
 def get_features_from_gff(gff_file, limite_info) :
     """This function returns a dict object containing all the features
@@ -51,7 +59,7 @@ def positions(gene_list_file, gene_dict) :
                                     name = feat.qualifiers['gene_name'],
                                     start = feat.location.nofuzzy_start,
                                     end = feat.location.nofuzzy_end,
-                                    strand = feat.location.strand )
+                                    strand = feat.strand )
             locations_list.append(location)
         except KeyError :
             print('Pas de gene_name pour %s.', line[0:len(line)-1])
@@ -60,7 +68,7 @@ def positions(gene_list_file, gene_dict) :
                                     name = '',
                                     start = feat.location.nofuzzy_start,
                                     end = feat.location.nofuzzy_end,
-                                    strand = feat.location.strand )
+                                    strand = feat.strand )
             locations_list.append(location)
     gene_list.close()
     return locations_list
@@ -118,7 +126,7 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
     threshold = distribution.threshold_balanced(balance)
     aligList = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequenceR.seq)) if (position > 0)and(score > threshold)]
     for alig in aligList :
-        sequenceR.features.append(SeqFeature(id = mot.matrix_id+"."+str(alig[0]), location = SeqFeature.FeatureLocation(start = alig[0], end = SeqFeature.FeatureLocation(start = alig[0] + len(mot)), strand = 1,  qualifiers["score"] = alig[1] ))
+        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = 1, score =  alig[1]))
 
     seqRC = sequenceR.seq.reverse_complement()
     mot.background = background(seqRC)
@@ -126,10 +134,9 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
     threshold = distribution.threshold_balanced(balance)
     aligListNeg = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(seqRC)) if (position > 0)and(score > threshold)]
     for alig in aligListNeg :
-        sequenceR.features.append(SeqFeature(id = mot.matrix_id+"."+str(alig[0])+".RC", location = SeqFeature.FeatureLocation(start = alig[0], end = SeqFeature.FeatureLocation(start = alig[0] + len(mot)), strand = -1,  qualifiers["score"] = alig[1] ))
+        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = -1, score =  alig[1]))
 
-
-    print('Found %i motifs' %len(ret_list))
+    print('Found %i motifs' %len(sequenceR.features))
     return sequenceR
 
 
@@ -137,5 +144,14 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
 def testingAllSeq(comb, return_dict) :
     for c in comb :
         print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
-        alignment = align_motif(mot=c[0], sequence=c[1]
-        return_dict[c[1].id] = alignment
+        alig_seq = align_motif(mot=c[0], sequence=c[1])
+        return_dict[c[1].id] = alig_seq
+
+
+def encoder(obj) :
+    if hasattr(obj, "__dict__") :
+        return obj.__dict__
+    elif isinstance(obj, numpy.floating) :
+        return float(obj)
+    else:
+        raise TypeError("Unserializable object {} of type {}".format(obj, type(obj)))

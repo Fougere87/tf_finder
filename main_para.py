@@ -3,11 +3,13 @@
 from feature_finder import *
 import multiprocessing as mp
 from itertools import product
-import pickle
+import json
+from itertools import product
+
 
 in_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.86.gtf"
-gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/Gene_list_EPI_vs_PE.txt"
-jasp_motifs_file = "/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/Jaspar_sites/pfm_vertebrates.txt"
+gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/Gene_list_EPI_vs_PE_short.txt"
+jasp_motifs_file = "/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/Jaspar_sites/pfm_vertebrates_sample.txt"
 fasta_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.dna.chromosome.1.fa"
 limite_info= dict( gff_id = [str(i) for i in range(1,21)]+['X','Y'], gff_source = ['ensembl'], gff_type = ['gene'])
 DISTANCE = 2000
@@ -41,10 +43,10 @@ for proc in jobs :
     proc.join()
 
 for k in return_dict.keys() :
-    t = eval(k)
-    if return_dict[k] != [] :
-        print(t[0], '\t', t[1], '\t', return_dict[k])
+    if return_dict[k].features != [] :
+        print(return_dict[k].id, '\t', str(return_dict[k].annotations), '\t', return_dict[k].name, '\t', end="")
+        [print("{};{};{};{};{}".format(feat.id, feat.name, feat.score, feat.start, feat.strand), end="\t") for feat in return_dict[k].features]
+        print("\n")
 
-
-
-pickle.dump(return_dict, open("./return_dict.p", "wb"))
+with open('resulstJson.json', 'w') as f :
+    json.dump(return_dict, f, default= encoder)
