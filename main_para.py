@@ -5,14 +5,8 @@ import multiprocessing as mp
 from itertools import product
 import json
 from itertools import product
+from param import *
 
-
-in_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.86.gtf"
-gene_list_file ="/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/TF_discov/Gene_list_EPI_vs_PE_short.txt"
-jasp_motifs_file = "/home/mayere/Analyse_RNAseq/Analysis/TF_discovery/Jaspar_sites/pfm_vertebrates_sample.txt"
-fasta_file = "/home/mayere/Analyse_RNAseq/Genomes/Ensembl_Mmul86/Macaca_mulatta.Mmul_8.0.1.dna.chromosome.1.fa"
-limite_info= dict( gff_id = [str(i) for i in range(1,21)]+['X','Y'], gff_source = ['ensembl'], gff_type = ['gene'])
-DISTANCE = 2000
 
 
 
@@ -26,16 +20,16 @@ motifs = motifs_list(jasp_motifs_file)
 print('Motifs extracted', len(motifs), "are to be tested per sequence")
 
 
-from itertools import product
+
 
 argum = list(product(motifs, sequences_records))
 manager = mp.Manager()
 return_dict = manager.dict()
 jobs = []
-numproc = 8
-for chunk in range(numproc) :
+
+for chunk in range(NUMPROC) :
     #print(argum[int(chunk*len(argum)/numproc):int((chunk+1)*len(argum)/numproc)])
-    p = mp.Process(target=testingAllSeq, args=(argum[int(chunk*len(argum)/numproc):int((chunk+1)*len(argum)/numproc)], return_dict,))
+    p = mp.Process(target=testingAllSeq, args=(argum[int(chunk*len(argum)/NUMPROC):int((chunk+1)*len(argum)/NUMPROC)], return_dict,))
     jobs.append(p)
     p.start()
 
@@ -48,5 +42,7 @@ for k in return_dict.keys() :
         [print("{};{};{};{};{}".format(feat.id, feat.name, feat.score, feat.start, feat.strand), end="\t") for feat in return_dict[k].features]
         print("\n")
 
+
+
 with open('resulstJson.json', 'w') as f :
-    json.dump(return_dict, f, default= encoder)
+    json.dump(dict(return_dict), f, default= encoder)

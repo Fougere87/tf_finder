@@ -10,7 +10,7 @@ from Bio.Alphabet import IUPAC
 from collections import Counter
 import os, sys, gc
 import numpy
-
+from param import *
 
 
 class FeatPosition:
@@ -23,13 +23,17 @@ class FeatPosition:
         self.strand = strand
 
 class AligFeat:
-    def __init__(self,  id, name, start, end, strand, score):
+    def __init__(self, gene_id, gene_name,  id, name, start, end, strand, score):
         self.id = id
         self.name = name
         self.start = start
         self.end = end
         self.strand = strand
         self.score = score
+        self.gene_id = gene_id
+        self.gene_name = gene_name
+
+
 
 def get_features_from_gff(gff_file, limite_info) :
     """This function returns a dict object containing all the features
@@ -62,7 +66,7 @@ def positions(gene_list_file, gene_dict) :
                                     strand = feat.strand )
             locations_list.append(location)
         except KeyError :
-            print('Pas de gene_name pour %s.', line[0:len(line)-1])
+            print('Pas de gene_name pour {}.'.format(line[0:len(line)-1]))
             location = FeatPosition(id = line[0:len(line)-1],
                                     chrom = feat.qualifiers['chrom'],
                                     name = '',
@@ -137,15 +141,18 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
         sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = -1, score =  alig[1]))
 
     print('Found %i motifs' %len(sequenceR.features))
-    return sequenceR
+    return sequenceR.features
 
 
 
 def testingAllSeq(comb, return_dict) :
     for c in comb :
         print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
-        alig_seq = align_motif(mot=c[0], sequence=c[1])
-        return_dict[c[1].id] = alig_seq
+        alig_seq = align_motif(mot=c[0], sequenceR=c[1])
+        if c[1].id not in return_dict.keys :
+            return_dict[c[1].id] = alig_seq
+        else :
+            return_dict[c[1].id].features.append(alig_seq.features)
 
 
 def encoder(obj) :
