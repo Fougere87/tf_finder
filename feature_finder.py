@@ -35,6 +35,7 @@ class AligFeat:
 
 
 
+
 def get_features_from_gff(gff_file, limite_info) :
     """This function returns a dict object containing all the features
     (as seqRecord objects) selected by featType and chromosomes contained
@@ -56,11 +57,11 @@ def positions(gene_list_file, gene_dict) :
         try :
             feat = gene_dict[line[0:len(line)-1]]
         except KeyError :
-            print('Gene %s non trouvé', line[0:len(line)-1])
+            print('Gene {} non trouvé'.format(line[0:len(line)-1]))
         try :
             location = FeatPosition(id = line[0:len(line)-1],
                                     chrom = feat.qualifiers['chrom'],
-                                    name = feat.qualifiers['gene_name'],
+                                    name = feat.qualifiers['gene_name'][0],
                                     start = feat.location.nofuzzy_start,
                                     end = feat.location.nofuzzy_end,
                                     strand = feat.strand )
@@ -130,7 +131,7 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
     threshold = distribution.threshold_balanced(balance)
     aligList = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(sequenceR.seq)) if (position > 0)and(score > threshold)]
     for alig in aligList :
-        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = 1, score =  alig[1]))
+        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = 1, score =  alig[1], gene_id=sequenceR.id, gene_name=sequenceR.name))
 
     seqRC = sequenceR.seq.reverse_complement()
     mot.background = background(seqRC)
@@ -138,21 +139,19 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
     threshold = distribution.threshold_balanced(balance)
     aligListNeg = [(position+1, score) for position, score in enumerate(mot.pssm.calculate(seqRC)) if (position > 0)and(score > threshold)]
     for alig in aligListNeg :
-        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = -1, score =  alig[1]))
+        sequenceR.features.append(AligFeat(id = mot.matrix_id, name = mot.name,  start = alig[0], end = alig[0] + len(mot), strand = -1, score =  alig[1], gene_id=sequenceR.id, gene_name=sequenceR.name))
 
     print('Found %i motifs' %len(sequenceR.features))
     return sequenceR.features
 
 
 
-def testingAllSeq(comb, return_dict) :
+def testingAllSeq(comb, return_list) :
     for c in comb :
         print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
         alig_seq = align_motif(mot=c[0], sequenceR=c[1])
-        if c[1].id not in return_dict.keys :
-            return_dict[c[1].id] = alig_seq
-        else :
-            return_dict[c[1].id].features.append(alig_seq.features)
+        if alig_seq != [] :
+            return_list.append(alig_seq)
 
 
 def encoder(obj) :
