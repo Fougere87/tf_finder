@@ -10,7 +10,7 @@ from Bio.Alphabet import IUPAC
 from collections import Counter
 import os, sys, gc
 import numpy
-from param import *
+
 
 
 class FeatPosition:
@@ -78,34 +78,73 @@ def positions(gene_list_file, gene_dict) :
     gene_list.close()
     return locations_list
 
-def finding_sequences(fasta, features, distance=DISTANCE) :
-    """Extracts the ustream sequences from the gnenomic fasta file. Possible to set the distance from start"""
-    genome_dict = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
+def finding_sequences(fasta, features, distance, mode = "Cache", direc = "both") :
+    """Extracts the up and downstream sequences from the gnenomic fasta file.
+    Possible to set the distance from start.
+    If you are short in RAM you can use mode = "Index"."""
+    print('Indexing genome')
+    if mode == "Cache" :
+        genome_dict = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
+    elif mode == "Index"    :
+        genome_dict = SeqIO.index(fasta, "fasta")
+    print('Done')
     sequences_list = []
     for feat in features :
         if feat.strand == '+1' :
-            sequence  = genome_dict[feat.chrom].seq[(feat.start-1)-distance:(feat.start-1)]
-            sequence.alphabet= IUPAC.unambiguous_dna
+            if direc == "both" :
+                sequence  = genome_dict[feat.chrom].seq[(feat.start)-distance:(feat.start+distance)]
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.start)-distance
+                seqAnnot.annotations["end"] = feat.start
+            elif direc == "up" :
+                sequence  = genome_dict[feat.chrom].seq[(feat.start)-distance:(feat.start)]
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.start)-distance
+                seqAnnot.annotations["end"] = feat.start
+            elif direc == "down" :
+                sequence  = genome_dict[feat.chrom].seq[feat.start:(feat.start+distance)]
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.start)
+                seqAnnot.annotations["end"] = feat.start+distance
             seqAnnot = SeqRecord(sequence)
             seqAnnot.id = feat.id
             seqAnnot.name = feat.name
-            seqAnnot.annotations["start"] =  (feat.start-1)-distance
-            seqAnnot.annotations["end"] = feat.start-1
             seqAnnot.annotations["chr"] = feat.chrom
             seqAnnot.annotations["strand"] = feat.strand
         else :
-            sequence  = genome_dict[feat.chrom].seq[(feat.end+1):(feat.end+1+distance)].reverse_complement()
-            sequence.alphabet= IUPAC.unambiguous_dna
-            seqAnnot = SeqRecord(sequence)
+            if direc == "both" :
+                sequence  = genome_dict[feat.chrom].seq[(feat.end)-distance:(feat.end)+distance].reverse_complement()
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.end)-distance
+                seqAnnot.annotations["end"] = feat.end+distance
+            elif direc == "down" :
+                sequence  = genome_dict[feat.chrom].seq[(feat.end)-distance:(feat.end)].reverse_complement()
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.end)-distance
+                seqAnnot.annotations["end"] = feat.end
+            elif direc == "up" :
+                sequence  = genome_dict[feat.chrom].seq[feat.end:(feat.end+distance)].reverse_complement()
+                sequence.alphabet= IUPAC.unambiguous_dna
+                seqAnnot = SeqRecord(sequence)
+                seqAnnot.annotations["start"] =  (feat.end)
+                seqAnnot.annotations["end"] = feat.end+distance
             seqAnnot.id = feat.id
             seqAnnot.name = feat.name
-            seqAnnot.annotations["start"] =  feat.end+1
-            seqAnnot.annotations["end"] = feat.end+1+distance
             seqAnnot.annotations["chr"] = feat.chrom
             seqAnnot.annotations["strand"] = feat.strand
         sequences_list.append(seqAnnot)
     del(genome_dict)
     return sequences_list
+
+
+def writeFasta(records, output) :
+    with open(output, "w") as output_handle:
+        SeqIO.write(records, output_handle, "fasta")
 
 def background(sequence) :
     """Calculates the background of a sequence : the rate of ACTG  and returns it as a dictionnary"""
@@ -146,8 +185,8 @@ def align_motif(mot, sequenceR, precision = 10**4, balance = 100000, pseudocount
 
 
 
-def testingAllSeq(comb, return_list) :
-    for c in comb :
+def testingAllSeq(prod, return_list) :
+    for c in prod :
         print('Testing gene %s with motif %s' % (c[1].id, c[0].matrix_id))
         alig_seq = align_motif(mot=c[0], sequenceR=c[1])
         if alig_seq != [] :
